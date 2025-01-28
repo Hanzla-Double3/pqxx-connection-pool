@@ -149,6 +149,79 @@ void test_prepared_statements() {
         throw;
     }
 }
+
+void test_increase_connections(){
+    constexpr std::array<std::pair<const char*, const char*>, 1> prep_statements = {{
+        // Add explicit type casts to the SQL parameters
+        {"test_stmt", "SELECT $1::int + $2::int"}
+    }};
+
+    ConnectionPool<1> pool(
+        con_str_,
+        1,
+        std::chrono::seconds(1),
+        prep_statements
+    );
+    
+    pool.init();
+    auto conn1_ = pool.get_connection();
+    pool.increase_connection();
+    try {
+        auto guard = pool.get_connection();
+        pqxx::work txn(*guard);
+        auto result = txn.exec_prepared("test_stmt", 2, 3);
+        txn.commit();
+        assert(result[0][0].as<int>() == 5);
+    } catch (const std::exception& e) {
+        std::cerr << "Test failed: " << e.what() << "\n";
+        throw;
+    }
+}
+
+void test_decrease_connections(){
+    constexpr std::array<std::pair<const char*, const char*>, 1> prep_statements = {{
+        // Add explicit type casts to the SQL parameters
+        {"test_stmt", "SELECT $1::int + $2::int"}
+    }};
+
+    ConnectionPool<1> pool(
+        con_str_,
+        2,
+        std::chrono::seconds(1),
+        prep_statements
+    );
+    
+    pool.init();
+    auto conn1_ = pool.get_connection();
+    pool.decrease_connection();
+    try {
+        auto guard = pool.get_connection();
+    } catch (const std::exception& e) {
+        std::cout << "Test passed dec conn\n" << e.what() << std::endl;
+    }
+}
+
+void test_number_of_connections(){
+    constexpr std::array<std::pair<const char*, const char*>, 1> prep_statements = {{
+        // Add explicit type casts to the SQL parameters
+        {"test_stmt", "SELECT $1::int + $2::int"}
+    }};
+
+    ConnectionPool<1> pool(
+        con_str_,
+        2,
+        std::chrono::seconds(1),
+        prep_statements
+    );
+    pool.init();
+    assert(pool.get_current_connections() == 2);
+    pool.decrease_connection();
+    assert(pool.get_current_connections() == 1);
+    pool.increase_connection();
+    assert(pool.get_current_connections() == 2);
+}
+
+
 int main() {
     example_usage();
     
@@ -156,7 +229,9 @@ int main() {
     test_concurrent_access();
     test_drain_functionality();
     test_prepared_statements();
-    
+    test_increase_connections();
+    test_decrease_connections();
+    test_number_of_connections();
     std::cout << "All tests passed!\n";
     return 0;
 }

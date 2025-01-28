@@ -138,12 +138,36 @@ private:
 public:
     bool increase_connection()
     {
-        // Todo: implement
-        return 1;
+        
+        try
+        {
+            auto conn = create_connection();
+            std::unique_lock lock(mutex_);
+            idle_connections_.push(conn);
+            ++connections;
+            return 1;
+        }
+        catch (pqxx::broken_connection &e)
+        {
+            return 0;
+        }
     }
+
     bool decrease_connection()
     {
-        // Todo:implement
-        return 1;
+        std::unique_lock<std::mutex> lock(mutex_);
+        // Wait for 10 seconds or until the condition is met (e.g., resource available)
+        if (!condition_.wait_for(lock, std::chrono::seconds(10), [this]
+                                 { return !idle_connections_.empty(); }))
+        {
+            return false; // Timeout occurred
+        }
+        idle_connections_.pop();
+        --connections;
+        return true;
+    }
+    size_t get_current_connections()
+    {
+        return connections;
     }
 };
