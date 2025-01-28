@@ -6,7 +6,7 @@
 
 *Performance on my shitty laptop never cared to check its specs, probably 10 gen i5, tested on Windows subsystem for linux*
 
-A high-performance connection pool implementation for PostgreSQL in C++ using libpqxx, designed for efficient database resource management in concurrent applications.
+A Maybe high-performance connection pool implementation for PostgreSQL in C++ using libpqxx, designed for efficient database resource management in concurrent applications.
 
 ## Features
 
